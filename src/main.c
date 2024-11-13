@@ -22,16 +22,18 @@ static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 // Command to read flash size (Winbond standard)
 #define FLASH_CMD_READ_SIZE 0xD8
 
-// Use SPI_DT_SPEC_GET to fetch the SPI device configuration
-static const struct spi_dt_spec spi_flash = SPI_DT_SPEC_GET(
-    DT_NODELABEL(w25q16cv),
-    SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPOL | SPI_MODE_CPHA, 0);
+static struct device *spi_flash_dev;
+
+const struct spi_config spi_cfg = {
+    .frequency = 40000000, // Set the SPI frequency
+    .operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB |
+                 SPI_MODE_CPOL | SPI_MODE_CPHA,
+    .slave = 0,
+    .cs = NULL, // CS will be controlled manually, via the GPIO pin defined
+                // in the device tree
+};
 
 int flash_get_size(void) {
-  // if (!spi_is_ready_dt(&spi_flash)) {
-  //   printk("SPI device not ready\n");
-  //   return -ENODEV;
-  // }
 
   uint8_t tx_buf[1] = {FLASH_CMD_READ_SIZE}; // Command to read size
   uint8_t rx_buf[3] = {0};                   // Space for size (3 bytes)
@@ -42,7 +44,7 @@ int flash_get_size(void) {
   const struct spi_buf_set tx_set = {.buffers = &tx, .count = 1};
   const struct spi_buf_set rx_set = {.buffers = &rx, .count = 1};
 
-  int ret = spi_transceive_dt(&spi_flash, &tx_set, &rx_set);
+  int ret = spi_transceive(spi_flash_dev, &spi_cfg, &tx_set, &rx_set);
   if (ret) {
     printk("SPI transceive failed: %d\n", ret);
     return ret;
@@ -56,8 +58,10 @@ int flash_get_size(void) {
 }
 
 int flash_init(void) {
-  if (!spi_is_ready_dt(&spi_flash)) {
-    printk("SPI device not ready\n");
+  // Get the SPI device at runtime using device_get_binding
+  spi_flash_dev = device_get_binding("extflash");
+  if (!spi_flash_dev) {
+    printk("Failed to get SPI device binding\n");
     return -ENODEV;
   }
 
@@ -71,7 +75,7 @@ int flash_init(void) {
   const struct spi_buf_set tx_set = {.buffers = &tx, .count = 1};
   const struct spi_buf_set rx_set = {.buffers = &rx, .count = 1};
 
-  int ret = spi_transceive_dt(&spi_flash, &tx_set, &rx_set);
+  int ret = spi_transceive(spi_flash_dev, &spi_cfg, &tx_set, &rx_set);
   if (ret) {
     printk("SPI transceive failed: %d\n", ret);
     return ret;
