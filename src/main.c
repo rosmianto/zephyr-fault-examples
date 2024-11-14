@@ -88,6 +88,10 @@ int flash_init(void) {
 
 void blink0(void) {
 
+#if MPU_FAULT_EXAMPLE
+  uint8_t buf[2000] = {0};
+#endif
+
   while (true) {
     gpio_pin_toggle_dt(&led0);
     k_msleep(200);
@@ -116,6 +120,12 @@ int main(void) {
   flash_init();
 
   flash_get_size();
+
+#if USAGE_FAULT_EXAMPLE
+  void (*callback)() = 0;
+
+  callback();
+#endif
 
   while (1) {
     k_msleep(1000);
