@@ -88,8 +88,6 @@ int flash_init(void) {
 
 void blink0(void) {
 
-  flash_get_size();
-
   while (true) {
     gpio_pin_toggle_dt(&led0);
     k_msleep(200);
@@ -116,6 +114,8 @@ int main(void) {
   led_init();
 
   flash_init();
+
+  flash_get_size();
 
   while (1) {
     k_msleep(1000);

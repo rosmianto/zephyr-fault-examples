@@ -1,3 +1,3 @@
-&w25q16cv {
+&spi1 {
 		label = "extflash";
 };
